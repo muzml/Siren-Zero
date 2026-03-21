@@ -4,9 +4,9 @@ import 'package:runanywhere/runanywhere.dart';
 import 'package:runanywhere_llamacpp/runanywhere_llamacpp.dart';
 import 'package:runanywhere_onnx/runanywhere_onnx.dart';
 
-import 'services/model_service.dart';
-import 'theme/app_theme.dart';
-import 'views/home_view.dart';
+import 'package:siren_zero/services/model_service.dart';
+import 'package:siren_zero/theme/app_theme.dart';
+import 'package:siren_zero/views/siren_zero_home_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,10 +35,10 @@ class RunAnywhereStarterApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RunAnywhere Starter',
+      title: 'Siren-Zero',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const HomeView(),
+      home: const SirenZeroHomeView(),
     );
   }
 }

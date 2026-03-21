@@ -1,5 +1,5 @@
-name: runanywhere_starter
-description: A comprehensive starter app demonstrating RunAnywhere SDK capabilities - on-device AI for Flutter.
+name: siren_zero
+description: Offline-first emergency response co-pilot powered by on-device AI. Life-saving guidance when every second counts.
 publish_to: 'none'
 
 version: 1.0.0+1
