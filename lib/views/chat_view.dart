@@ -36,7 +36,7 @@ class _ChatViewState extends State<ChatView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: AppColors.primaryBg,
       appBar: AppBar(
         title: const Text('Chat'),
         leading: IconButton(
@@ -195,7 +195,7 @@ class _ChatViewState extends State<ChatView> {
                 decoration: InputDecoration(
                   hintText: 'Type a message...',
                   filled: true,
-                  fillColor: AppColors.primaryMid,
+                  fillColor: AppColors.primaryBg,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,

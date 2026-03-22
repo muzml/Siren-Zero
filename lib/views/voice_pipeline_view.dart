@@ -39,7 +39,7 @@ class _VoicePipelineViewState extends State<VoicePipelineView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: AppColors.primaryBg,
       appBar: AppBar(
         title: const Text('Voice Pipeline'),
         leading: IconButton(

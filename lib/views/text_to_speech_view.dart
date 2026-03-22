@@ -64,7 +64,7 @@ class _TextToSpeechViewState extends State<TextToSpeechView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: AppColors.primaryBg,
       appBar: AppBar(
         title: const Text('Text to Speech'),
         leading: IconButton(
@@ -134,7 +134,7 @@ class _TextToSpeechViewState extends State<TextToSpeechView> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.primaryMid,
+              color: AppColors.primaryBg,
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),

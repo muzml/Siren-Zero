@@ -456,7 +456,7 @@ class _ToolCallingViewState extends State<ToolCallingView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryDark,
+      backgroundColor: AppColors.primaryBg,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -669,7 +669,7 @@ class _ToolCallingViewState extends State<ToolCallingView> {
                 decoration: InputDecoration(
                   hintText: "Try: What's the weather in Tokyo?",
                   filled: true,
-                  fillColor: AppColors.primaryMid,
+                  fillColor: AppColors.primaryBg,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
@@ -1105,7 +1105,7 @@ class _ToolCallDetailSheet extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.primaryMid,
+            color: AppColors.primaryBg,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(

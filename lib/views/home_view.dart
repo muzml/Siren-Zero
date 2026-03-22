@@ -21,9 +21,9 @@ class HomeView extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.primaryDark,
+              AppColors.primaryLight,
               Color(0xFF0F1629),
-              AppColors.primaryMid,
+              AppColors.primaryBg,
             ],
           ),
         ),

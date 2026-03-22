@@ -3,11 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// App color palette - Emergency-first design for Siren-Zero
 class AppColors {
-  // Primary colors - Dark with emergency red accents
-  static const Color primaryDark = Color(0xFF0A0A0A);
-  static const Color primaryMid = Color(0xFF1A1A1A);
-  static const Color surfaceCard = Color(0xFF212121);
-  static const Color surfaceElevated = Color(0xFF2A2A2A);
+  // Primary colors - Light/White theme with emergency red accents
+  static const Color primaryLight = Color(0xFFFFFFFF);
+  static const Color primaryBg = Color(0xFFF8F9FA);
+  static const Color surfaceCard = Color(0xFFFFFFFF);
+  static const Color surfaceElevated = Color(0xFFF5F5F5);
 
   // Emergency accent colors
   static const Color emergencyRed = Color(0xFFFF1744);
@@ -15,6 +15,7 @@ class AppColors {
   static const Color warningYellow = Color(0xFFFFD600);
   static const Color safeGreen = Color(0xFF00E676);
   static const Color infoBlue = Color(0xFF00B0FF);
+  static const Color darkBlue = Color(0xFF1E3A8A); // Solid dark blue for system ready
 
   // Legacy accent colors (for compatibility)
   static const Color accentCyan = infoBlue;
@@ -23,10 +24,10 @@ class AppColors {
   static const Color accentGreen = safeGreen;
   static const Color accentOrange = alertOrange;
 
-  // Text colors
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB0B0B0);
-  static const Color textMuted = Color(0xFF707070);
+  // Text colors - Updated for light theme
+  static const Color textPrimary = Color(0xFF1A1A1A);
+  static const Color textSecondary = Color(0xFF6B7280);
+  static const Color textMuted = Color(0xFF9CA3AF);
 
   // Status colors for emergency levels
   static const Color critical = emergencyRed;
@@ -40,11 +41,11 @@ class AppColors {
   static const Color error = emergencyRed;
   static const Color info = infoBlue;
 
-  // Gradients
+  // Gradients - Updated for light theme
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryDark, primaryMid],
+    colors: [Color(0xFFFAFAFA), Color(0xFFFFFFFF)],
   );
 
   static const LinearGradient emergencyGradient = LinearGradient(
@@ -63,8 +64,8 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF2A2A2A),
-      Color(0xFF1A1A1A),
+      Color(0xFFFFFFFF),
+      Color(0xFFFAFAFA),
     ],
   );
 }
@@ -73,17 +74,17 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.primaryDark,
-      colorScheme: const ColorScheme.dark(
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: AppColors.primaryLight,
+      colorScheme: const ColorScheme.light(
         primary: AppColors.emergencyRed,
         secondary: AppColors.alertOrange,
         surface: AppColors.surfaceCard,
         error: AppColors.critical,
-        onPrimary: AppColors.textPrimary,
-        onSecondary: AppColors.textPrimary,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
         onSurface: AppColors.textPrimary,
-        onError: AppColors.textPrimary,
+        onError: Colors.white,
       ),
       textTheme: GoogleFonts.interTextTheme(
         ThemeData.dark().textTheme,
@@ -137,7 +138,7 @@ class AppTheme {
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: AppColors.primaryLight,
         elevation: 0,
         titleTextStyle: GoogleFonts.spaceGrotesk(
           fontSize: 20,
