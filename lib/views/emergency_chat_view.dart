@@ -261,72 +261,88 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
 
   Widget _buildEmptyState() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 20), // 🔥 reduced
-
-          // ICON
+          // 💎 PREMIUM ICON BOX
           Center(
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: AppColors.emergencyGradient,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF2D55), Color(0xFFE6003B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.emergencyRed.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+                    color: const Color(0xFFFF2D55).withOpacity(0.4),
+                    blurRadius: 30,
+                    spreadRadius: 4,
+                    offset: const Offset(0, 10),
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: -5,
+                    offset: const Offset(0, -5),
                   ),
                 ],
               ),
               child: const Icon(
-                Icons.chat_bubble_outline,
-                size: 40,
+                Icons.smart_toy_rounded,
+                size: 48,
                 color: Colors.white,
               ),
             ),
-          ).animate().scale(duration: 600.ms),
+          ).animate().scale(duration: 800.ms, curve: Curves.easeOutBack),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
 
-          // TITLE
+          // 💎 PREMIUM TITLE
           Text(
             'Start a Conversation',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : AppColors.lightTextPrimary,
                 ),
-          ),
+          ).animate().fadeIn(delay: 200.ms, duration: 600.ms).slideY(begin: 0.1),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
           // SUBTEXT
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Ask me anything about emergency procedures, first aid, or medical guidance',
+              'Ask me anything about emergency procedures, first aid, or medical guidance.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white60
+                        : AppColors.lightTextSecondary,
+                    height: 1.5,
+                    fontSize: 15,
                   ),
             ),
-          ),
+          ).animate().fadeIn(delay: 300.ms, duration: 600.ms).slideY(begin: 0.1),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 48),
 
-          // 🔥 FINAL CHIP FIX
+          // 🔥 PREMIUM CASCADING CHIPS
           Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildQuickPrompt('How to perform CPR?', Icons.favorite),
-              const SizedBox(height: 10),
-              _buildQuickPrompt('Treating burns', Icons.local_fire_department),
-              const SizedBox(height: 10),
-              _buildQuickPrompt('Stop bleeding', Icons.bloodtype),
+              _buildQuickPrompt('How to perform CPR?', Icons.favorite, 0),
+              const SizedBox(height: 12),
+              _buildQuickPrompt('Treating burns immediately', Icons.local_fire_department, 1),
+              const SizedBox(height: 12),
+              _buildQuickPrompt('Stop severe bleeding', Icons.bloodtype, 2),
             ],
           ),
           const SizedBox(height: 30),
@@ -335,7 +351,7 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
     );
   }
 
-  Widget _buildQuickPrompt(String text, IconData icon) {
+  Widget _buildQuickPrompt(String text, IconData icon, int index) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -345,169 +361,270 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
         },
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1E293B).withOpacity(0.8)
+                ? const Color(0xFF1E293B).withOpacity(0.6)
                 : Colors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.05)
+                  ? const Color(0xFF38BDF8).withOpacity(0.3)
                   : Colors.black.withOpacity(0.08),
               width: 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? const Color(0xFF38BDF8).withOpacity(0.05)
+                    : Colors.black.withOpacity(0.03),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: AppColors.emergencyRed),
-              const SizedBox(width: 8),
-              Text(
-                text,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : AppColors.lightTextPrimary,
-                    ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.emergencyRed.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 20, color: AppColors.emergencyRed),
               ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  text,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : AppColors.lightTextPrimary,
+                      ),
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Theme.of(context).brightness == Brightness.dark ? Colors.white30 : Colors.black26),
             ],
           ),
         ),
       ),
-    );
+    ).animate().fadeIn(delay: (400 + (index * 100)).ms, duration: 500.ms).slideX(begin: 0.05);
   }
 
   Widget _buildMessageBubble(String text, bool isUser,
       {bool isStreaming = false}) {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          gradient: isUser
-              ? const LinearGradient(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
                   colors: [Color(0xFFFF2D55), Color(0xFFE6003B)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                )
-              : null,
-          color: isUser
-              ? null
-              : (Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF1E293B)
-                  : Colors.white.withOpacity(0.9)),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: Radius.circular(isUser ? 20 : 4),
-            bottomRight: Radius.circular(isUser ? 4 : 20),
-          ),
-          border: isUser
-              ? null
-              : Border.all(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.08)),
-          boxShadow: [
-            BoxShadow(
-              color: isUser
-                  ? const Color(0xFFFF2D55).withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              text,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isUser
-                        ? Colors.white
-                        : (Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withOpacity(0.9)
-                            : AppColors.lightTextPrimary),
-                    height: 1.5,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF2D55).withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
-            ),
-            if (isStreaming)
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.emergencyRed,
-                        ),
+                ],
+              ),
+              child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 14),
+            ).animate().scale(delay: 200.ms, duration: 300.ms, curve: Curves.easeOutBack),
+            const SizedBox(width: 8),
+          ],
+          
+          Flexible(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: isUser
+                    ? const LinearGradient(
+                        colors: [Color(0xFF38BDF8), Color(0xFF3B82F6)], // User gets nice blue
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isUser
+                    ? null
+                    : (Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1E293B).withOpacity(0.8) // Glassmorphic AI bubble
+                        : Colors.white.withOpacity(0.95)),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isUser ? 20 : 6),
+                  bottomRight: Radius.circular(isUser ? 6 : 20),
+                ),
+                border: isUser
+                    ? null
+                    : Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.black.withOpacity(0.05),
+                        width: 1.5,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Generating...',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
+                boxShadow: [
+                  BoxShadow(
+                    color: isUser
+                        ? const Color(0xFF38BDF8).withOpacity(0.3)
+                        : Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: isUser ? 0 : 10, sigmaY: isUser ? 0 : 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        text,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: isUser
+                                  ? Colors.white
+                                  : (Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white.withOpacity(0.95)
+                                      : AppColors.lightTextPrimary),
+                              height: 1.5,
+                              fontSize: 14,
+                            ),
+                      ),
+                      if (isStreaming)
+                        Container(
+                          margin: const EdgeInsets.only(top: 12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    const Color(0xFFFF2D55),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Analyzing...',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppColors.textMuted,
+                                      fontSize: 11,
+                                    ),
+                              ),
+                            ],
                           ),
-                    ),
-                  ],
+                        ),
+                    ],
+                  ),
                 ),
               ),
-          ],
-        ),
+            ),
+          ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0),
+
+          if (isUser) ...[
+            const SizedBox(width: 8),
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFE2E8F0),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.black.withOpacity(0.05),
+                )
+              ),
+              child: Icon(Icons.person_rounded, 
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white70 : Colors.black54, 
+                  size: 14),
+          ).animate().scale(delay: 100.ms, duration: 250.ms, curve: Curves.easeOutBack),
+          ]
+        ],
       ),
-    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0);
+    );
   }
 
   Widget _buildInputArea() {
     return ClipRRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF0F172A).withOpacity(0.85)
+                ? const Color(0xFF0F172A).withOpacity(0.7)
                 : Colors.white.withOpacity(0.85),
             border: Border(
               top: BorderSide(
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withOpacity(0.05)
+                    ? const Color(0xFF38BDF8).withOpacity(0.15)
                     : Colors.black.withOpacity(0.06),
-                width: 1,
+                width: 1.5,
               ),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF38BDF8).withOpacity(0.05)
+                    : Colors.transparent,
+                blurRadius: 20,
+                offset: const Offset(0, -10),
+              ),
+            ],
           ),
           child: SafeArea(
+            bottom: true,
+            top: false,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Input Container
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   decoration: BoxDecoration(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF1E293B).withOpacity(0.8)
-                        : Colors.black.withOpacity(0.04),
-                    borderRadius: BorderRadius.circular(24),
+                        ? const Color(0xFF1E293B).withOpacity(0.7)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(30),
                     border: Border.all(
                       color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white.withOpacity(0.05)
-                          : Colors.black.withOpacity(0.06),
+                          ? const Color(0xFF38BDF8).withOpacity(0.3)
+                          : Colors.black.withOpacity(0.08),
+                      width: 1.5,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -515,7 +632,7 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
                       // Image Button
                       _buildInputIconButton(
                         Icons.image_outlined,
-                        AppColors.infoBlue,
+                        const Color(0xFF38BDF8),
                         'Add Image',
                         _handleImageInput,
                       ),
@@ -524,7 +641,7 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
                       // Voice Button
                       _buildInputIconButton(
                         Icons.mic_outlined,
-                        AppColors.alertOrange,
+                        const Color(0xFFFF9500),
                         'Voice Input',
                         _handleVoiceInput,
                       ),
@@ -544,25 +661,29 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
                                           Brightness.dark
                                       ? Colors.white30
                                       : AppColors.lightTextMuted,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
                                 ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 4,
-                              vertical: 8,
+                              vertical: 12,
                             ),
                           ),
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context).brightness ==
                                         Brightness.dark
                                     ? Colors.white
-                                    : AppColors.lightTextPrimary),
+                                    : AppColors.lightTextPrimary,
+                                fontSize: 15,
+                              ),
                           maxLines: null,
                           minLines: 1,
                           enabled: !_isStreaming,
                           onSubmitted: (_) => _sendMessage(),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
 
                       // Send Button
                       _buildSendButton(),
@@ -571,17 +692,17 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
                 ),
 
                 // Feature Pills
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildFeaturePill(Icons.offline_bolt, 'Offline'),
-                      const SizedBox(width: 6),
-                      _buildFeaturePill(Icons.lock_outline, 'Private'),
-                      const SizedBox(width: 6),
-                      _buildFeaturePill(Icons.speed, '7ms'),
+                      _buildFeaturePill(Icons.offline_bolt_rounded, 'OFFLINE'),
+                      const SizedBox(width: 8),
+                      _buildFeaturePill(Icons.lock_outline_rounded, 'PRIVATE'),
+                      const SizedBox(width: 8),
+                      _buildFeaturePill(Icons.speed_rounded, '7ms LATENCY'),
                     ],
                   ),
                 ),
@@ -605,20 +726,29 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
         color: Colors.transparent,
         child: InkWell(
           onTap: _isStreaming ? null : onTap,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
           child: Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _isStreaming
-                  ? AppColors.textMuted.withOpacity(0.1)
-                  : color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+                  ? AppColors.textMuted.withOpacity(0.05)
+                  : color.withOpacity(0.12),
+              shape: BoxShape.circle,
               border: Border.all(
                 color: _isStreaming
-                    ? AppColors.textMuted.withOpacity(0.2)
-                    : color.withOpacity(0.3),
-                width: 1,
+                    ? AppColors.textMuted.withOpacity(0.1)
+                    : color.withOpacity(0.4),
+                width: 1.5,
               ),
+              boxShadow: _isStreaming
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: color.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
             ),
             child: Icon(
               icon,
@@ -636,20 +766,24 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
       color: Colors.transparent,
       child: InkWell(
         onTap: _isStreaming ? null : _sendMessage,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(24),
         child: Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            gradient: _isStreaming ? null : AppColors.emergencyGradient,
-            color: _isStreaming ? AppColors.textMuted : null,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: _isStreaming
+            gradient: _isStreaming
                 ? null
+                : const LinearGradient(
+                    colors: [Color(0xFFFF2D55), Color(0xFFE6003B)],
+                  ),
+            color: _isStreaming ? AppColors.textMuted.withOpacity(0.3) : null,
+            shape: BoxShape.circle,
+            boxShadow: _isStreaming
+                ? []
                 : [
                     BoxShadow(
-                      color: AppColors.emergencyRed.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: const Color(0xFFFF2D55).withOpacity(0.5),
+                      blurRadius: 15,
+                      offset: const Offset(0, 4),
                     ),
                   ],
           ),
@@ -665,11 +799,17 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
 
   Widget _buildFeaturePill(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFF38BDF8).withOpacity(0.1),
-        border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.3), width: 1.2),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF38BDF8).withOpacity(0.05),
+            blurRadius: 6,
+          ),
+        ]
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -680,7 +820,8 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 9,
-                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w900,
                   color: const Color(0xFF38BDF8),
                 ),
           ),

@@ -116,6 +116,13 @@ class ModelService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final stillDownloaded = await isModelDownloaded(llmModelId);
+      if (!stillDownloaded) {
+        throw Exception('Model download incomplete.');
+      }
+      if (isLLMLoaded) {
+        await RunAnywhere.unloadModel();
+      }
       await RunAnywhere.loadModel(llmModelId);
     } catch (e) {
       print('LLM load error: $e');
@@ -158,6 +165,13 @@ class ModelService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final stillDownloaded = await isModelDownloaded(sttModelId);
+      if (!stillDownloaded) {
+        throw Exception('STT Model download incomplete.');
+      }
+      if (isSTTLoaded) {
+        await RunAnywhere.unloadSTTModel();
+      }
       await RunAnywhere.loadSTTModel(sttModelId);
     } catch (e) {
       print('STT load error: $e');
@@ -200,6 +214,13 @@ class ModelService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final stillDownloaded = await isModelDownloaded(ttsModelId);
+      if (!stillDownloaded) {
+        throw Exception('TTS Model download incomplete.');
+      }
+      if (isTTSLoaded) {
+        await RunAnywhere.unloadTTSVoice();
+      }
       await RunAnywhere.loadTTSVoice(ttsModelId);
     } catch (e) {
       print('TTS load error: $e');

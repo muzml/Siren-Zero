@@ -83,6 +83,7 @@ class MeshService {
       userName,
       strategy,
       onConnectionInitiated: (id, info) {
+        _connectedPeerName = info.endpointName;
         Nearby().acceptConnection(
           id,
           onPayLoadRecieved: (endId, payload) {

@@ -1361,9 +1361,11 @@ class ModelSetupSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.surfaceCard
+            : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -1462,8 +1464,22 @@ class ModelSetupSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.surfaceElevated
+            : Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Theme.of(context).brightness == Brightness.light
+            ? Border.all(color: Colors.black.withOpacity(0.08))
+            : Border.all(color: Colors.white.withOpacity(0.05)),
+        boxShadow: Theme.of(context).brightness == Brightness.light
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1476,11 +1492,18 @@ class ModelSetupSheet extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
                       '$subtitle • $size',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? AppColors.textMuted
+                                : AppColors.lightTextSecondary,
+                          ),
                     ),
                   ],
                 ),

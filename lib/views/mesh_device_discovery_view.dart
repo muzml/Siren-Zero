@@ -23,6 +23,7 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
   MeshConnectionState _state = MeshConnectionState.idle;
   String? _connectingDeviceId;
   String? _errorMessage;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -43,6 +44,21 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
             _connectingDeviceId = null;
           }
         });
+        
+        // Auto-navigate to chat upon connection for BOTH peers
+        if (state == MeshConnectionState.connected && !_hasNavigated) {
+          _hasNavigated = true;
+          _mesh.stopScanAndAdvertise();
+          _radarController.stop();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MeshChatPage(
+                peerName: _mesh.connectedPeerName ?? 'Unknown Service',
+              ),
+            ),
+          );
+        }
       }
     };
   }
@@ -98,14 +114,7 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
       if (!mounted) return;
 
       if (success) {
-        _mesh.stopScanAndAdvertise();
-        _radarController.stop();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MeshChatPage(peerName: device.name),
-          ),
-        );
+        // Navigation is now handled generically by onConnectionStateChanged
       } else {
         _showError('Could not connect to ${device.name}. Try again.');
       }
@@ -310,9 +319,12 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
       child: Column(
         children: [
           // Radar animation
-          Stack(
-            alignment: Alignment.center,
-            children: [
+          SizedBox(
+            width: 150,
+            height: 150,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
               // Glowing backdrop
               if (isScanning)
                 Container(
@@ -396,14 +408,17 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
 
           const SizedBox(height: 20),
 
-            AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: isScanning
+          SizedBox(
+            height: 60,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: isScanning
                 ? Text(
                     'Looking for devices…',
                     key: const ValueKey('scanning'),
@@ -441,6 +456,7 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
                       ),
                     ),
                   ),
+            ),
           ),
         ],
       ),
