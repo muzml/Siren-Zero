@@ -1,9 +1,19 @@
 import 'dart:ui';
+import 'dart:io';
+import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import 'package:runanywhere/runanywhere.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import '../services/model_service.dart';
 import '../services/emergency_response_service.dart';
 import '../services/emergency_prompts.dart';
 import '../theme/app_theme.dart';
+import '../widgets/audio_visualizer.dart';
 
 /// Emergency Chat View
 /// Premium text-based emergency guidance with multimodal input
@@ -27,6 +37,19 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
   bool _isStreaming = false;
   String _streamingText = '';
 
+  // Manual Voice Mode State
+  final AudioRecorder _recorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isVoiceMode = false;
+  bool _isRecording = false;
+  bool _isProcessingVoice = false;
+  bool _lastQueryWasVoice = false;
+  double _audioLevel = 0.0;
+  String _voiceStatus = '';
+  List<int> _audioBuffer = [];
+  StreamSubscription<Uint8List>? _recordingSubscription;
+  Timer? _levelTimer;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +59,10 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
 
   @override
   void dispose() {
+    _recordingSubscription?.cancel();
+    _levelTimer?.cancel();
+    _recorder.dispose();
+    _audioPlayer.dispose();
     _textController.dispose();
     _scrollController.dispose();
     _emergencyService.dispose();
@@ -60,7 +87,11 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
-    _textController.clear();
+    if (!_lastQueryWasVoice) {
+      _textController.clear();
+    } else {
+      _textController.clear();
+    }
 
     // 🔥 SHOW USER MESSAGE
     setState(() {
@@ -81,12 +112,15 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
       _isStreaming = true;
       _streamingText = '';
     });
+    
+    String generatedOutput = "";
 
     try {
-      await for (final token
-          in _emergencyService.streamEmergencyResponse(text)) {
+      await for (final token in _emergencyService.streamEmergencyResponse(text)) {
+        if (!mounted) return;
         setState(() {
           _streamingText += token;
+          generatedOutput = _streamingText;
         });
         _scrollToBottom();
       }
@@ -100,11 +134,17 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
         );
       }
     } finally {
-      setState(() {
-        _isStreaming = false;
-        _streamingText = '';
-      });
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _isStreaming = false;
+          _streamingText = '';
+        });
+        if (_lastQueryWasVoice && generatedOutput.isNotEmpty) {
+           _synthesizeAndPlay(generatedOutput);
+           _lastQueryWasVoice = false;
+        }
+        _scrollToBottom();
+      }
     }
   }
 
@@ -117,14 +157,199 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
     );
   }
 
-  void _handleVoiceInput() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Voice input coming soon'),
-        duration: Duration(seconds: 2),
+  Future<void> _handleVoiceInput() async {
+    if (_isRecording) {
+      await _stopRecording();
+    } else {
+      await _startRecording();
+    }
+  }
+
+  Future<void> _startRecording() async {
+    final modelService = Provider.of<ModelService>(context, listen: false);
+    if (!modelService.isVoiceAgentReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loading voice models... please wait.')),
+      );
+      if (!modelService.isSTTLoaded) await modelService.downloadAndLoadSTT();
+      if (!modelService.isLLMLoaded) await modelService.downloadAndLoadLLM();
+      if (!modelService.isTTSLoaded) await modelService.downloadAndLoadTTS();
+    }
+
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission denied')),
+        );
+      }
+      return;
+    }
+
+    await _audioPlayer.stop();
+
+    setState(() {
+      _isVoiceMode = true;
+      _isRecording = true;
+      _isProcessingVoice = false;
+      _lastQueryWasVoice = true;
+      _audioBuffer = [];
+      _voiceStatus = 'Listening...';
+    });
+
+    final stream = await _recorder.startStream(
+      const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: 16000,
+        numChannels: 1,
       ),
     );
+
+    _recordingSubscription = stream.listen((data) {
+      _audioBuffer.addAll(data);
+    });
+
+    _levelTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
+      final amplitude = await _recorder.getAmplitude();
+      if (mounted) {
+        setState(() {
+          final dB = amplitude.current;
+          _audioLevel = ((dB + 60) / 60).clamp(0.0, 1.0);
+        });
+      }
+    });
   }
+
+  Future<void> _stopRecording() async {
+    _recordingSubscription?.cancel();
+    _levelTimer?.cancel();
+    await _recorder.stop();
+
+    setState(() {
+      _isRecording = false;
+      _audioLevel = 0.0;
+      _voiceStatus = 'Processing...';
+      _isProcessingVoice = true;
+    });
+
+    try {
+      final audioData = Uint8List.fromList(_audioBuffer);
+      if (audioData.length > 1600) {
+        String text = await RunAnywhere.transcribe(audioData);
+        text = text.trim();
+
+        // 🛑 Filter out Whisper hallucination loops on silence
+        text = text.replaceAll(RegExp(r'(Hello\.\s*){3,}'), 'Hello.');
+        text = text.replaceAll(RegExp(r'(Thank you\.\s*){3,}'), '');
+        final cleanedForCheck = text.replaceAll('.', '').replaceAll(' ', '').toLowerCase();
+        if (cleanedForCheck == 'hello' || cleanedForCheck == 'thankyou') {
+           text = ''; // Ignore short dead-air hallucinations
+        }
+
+        if (mounted) {
+          setState(() {
+            _isProcessingVoice = false;
+            _isVoiceMode = false;
+          });
+          if (text.isNotEmpty && text.length > 2) {
+             _textController.text = text;
+             _sendMessage();
+          } else {
+             ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not hear you clearly. Please try again.'))
+             );
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isProcessingVoice = false;
+            _isVoiceMode = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Recording too short.'))
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessingVoice = false;
+          _isVoiceMode = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('Error: $e'))
+        );
+      }
+    }
+  }
+
+  Future<void> _synthesizeAndPlay(String text) async {
+    if (text.isEmpty) return;
+    try {
+      // Clean up markdown hashes and stars for the voice synthesizer
+      String cleanText = text.replaceAll('*', '').replaceAll('#', '').replaceAll('\n', ' ');
+      
+      // Split into sentences so Kokoro TTS doesn't timeout/fail on huge text blocks
+      final chunks = cleanText.split(RegExp(r'(?<=[.!?])\s+'));
+      
+      for (int i = 0; i < chunks.length; i++) {
+         final chunk = chunks[i].trim();
+         if (chunk.isEmpty) continue;
+         
+         // In an emergency, we don't want a 2-minute voice monolog. Max 3 sentences spoken.
+         if (i >= 3) break;
+
+         final result = await RunAnywhere.synthesize(chunk, rate: 1.0);
+         final wavData = _createWavFromFloat32(result.samples, result.sampleRate);
+         final tempDir = await getTemporaryDirectory();
+         final tempFile = File('${tempDir.path}/tts_chunk_${i}_${DateTime.now().millisecondsSinceEpoch}.wav');
+         await tempFile.writeAsBytes(wavData);
+         
+         await _audioPlayer.play(DeviceFileSource(tempFile.path));
+         
+         // Crucial: Wait until audio is completely done before synthesizing/playing next
+         await _audioPlayer.onPlayerComplete.first;
+      }
+    } catch (e) {
+      debugPrint('TTS Error: $e');
+    }
+  }
+
+  Uint8List _createWavFromFloat32(Float32List samples, int sampleRate) {
+    final numChannels = 1;
+    final bitsPerSample = 16;
+    final byteRate = sampleRate * numChannels * (bitsPerSample ~/ 8);
+    final blockAlign = numChannels * (bitsPerSample ~/ 8);
+    final dataSize = samples.length * 2;
+    final fileSize = 36 + dataSize;
+
+    final buffer = BytesBuilder();
+    buffer.add('RIFF'.codeUnits);
+    buffer.add(_int32ToBytes(fileSize));
+    buffer.add('WAVE'.codeUnits);
+
+    buffer.add('fmt '.codeUnits);
+    buffer.add(_int32ToBytes(16));
+    buffer.add(_int16ToBytes(1));
+    buffer.add(_int16ToBytes(numChannels));
+    buffer.add(_int32ToBytes(sampleRate));
+    buffer.add(_int32ToBytes(byteRate));
+    buffer.add(_int16ToBytes(blockAlign));
+    buffer.add(_int16ToBytes(bitsPerSample));
+
+    buffer.add('data'.codeUnits);
+    buffer.add(_int32ToBytes(dataSize));
+
+    for (final sample in samples) {
+      final int16Sample = (sample * 32767).clamp(-32768, 32767).toInt();
+      buffer.add(_int16ToBytes(int16Sample));
+    }
+    return buffer.toBytes();
+  }
+
+  List<int> _int32ToBytes(int value) => [value & 0xFF, (value >> 8) & 0xFF, (value >> 16) & 0xFF, (value >> 24) & 0xFF];
+  List<int> _int16ToBytes(int value) => [value & 0xFF, (value >> 8) & 0xFF];
 
   @override
   Widget build(BuildContext context) {
@@ -449,7 +674,6 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
           Flexible(
             child: Container(
               margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 gradient: isUser
                     ? const LinearGradient(
@@ -491,49 +715,77 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
                 borderRadius: BorderRadius.circular(20),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: isUser ? 0 : 10, sigmaY: isUser ? 0 : 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        text,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: isUser
-                                  ? Colors.white
-                                  : (Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white.withOpacity(0.95)
-                                      : AppColors.lightTextPrimary),
-                              height: 1.5,
-                              fontSize: 14,
-                            ),
-                      ),
-                      if (isStreaming)
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (text.isEmpty && isStreaming)
                         Container(
-                          margin: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              SizedBox(
-                                width: 14,
-                                height: 14,
+                              const SizedBox(
+                                width: 12,
+                                height: 12,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    const Color(0xFFFF2D55),
+                                    Color(0xFFFF2D55),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               Text(
-                                'Analyzing...',
+                                'Thinking...',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.textMuted,
-                                      fontSize: 11,
+                                      color: Theme.of(context).brightness == Brightness.dark 
+                                          ? Colors.white70 : AppColors.lightTextMuted,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.5,
+                                    ),
+                              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                               .fade(begin: 0.4, end: 1.0, duration: 600.ms),
+                            ],
+                          ),
+                        )
+                      else
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: text,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: isUser
+                                          ? Colors.white
+                                          : (Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.white.withOpacity(0.95)
+                                              : AppColors.lightTextPrimary),
+                                      height: 1.5,
+                                      fontSize: 14,
                                     ),
                               ),
+                              if (isStreaming && !isUser)
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(left: 4),
+                                    width: 6,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF2D55),
+                                      borderRadius: BorderRadius.circular(1),
+                                    ),
+                                  ).animate(onPlay: (c) => c.repeat(reverse: true))
+                                   .fade(begin: 0.2, end: 1.0, duration: 400.ms),
+                                ),
                             ],
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -601,6 +853,10 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Active Quick Replies during chat
+                if (_emergencyService.conversationHistory.isNotEmpty)
+                  _buildActiveQuickReplies(),
+                  
                 // Input Container
                 Container(
                   padding:
@@ -630,63 +886,124 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       // Image Button
-                      _buildInputIconButton(
-                        Icons.image_outlined,
-                        const Color(0xFF38BDF8),
-                        'Add Image',
-                        _handleImageInput,
-                      ),
-                      const SizedBox(width: 8),
+                      if (!_isVoiceMode)
+                        _buildInputIconButton(
+                          Icons.image_outlined,
+                          const Color(0xFF38BDF8),
+                          'Add Image',
+                          _handleImageInput,
+                        ),
+                      if (!_isVoiceMode)
+                        const SizedBox(width: 8),
 
                       // Voice Button
                       _buildInputIconButton(
-                        Icons.mic_outlined,
-                        const Color(0xFFFF9500),
-                        'Voice Input',
+                        _isRecording ? Icons.stop_rounded : Icons.mic_outlined,
+                        _isRecording ? AppColors.emergencyRed : const Color(0xFFFF9500),
+                        _isRecording ? 'Stop Voice' : 'Voice Input',
                         _handleVoiceInput,
                       ),
                       const SizedBox(width: 12),
 
-                      // Text Field
-                      Expanded(
-                        child: TextField(
-                          controller: _textController,
-                          decoration: InputDecoration(
-                            hintText: 'Describe emergency...',
-                            hintStyle: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.white30
-                                      : AppColors.lightTextMuted,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
+                      // Text Field OR Voice Visualizer
+                      if (_isVoiceMode || _isProcessingVoice)
+                        Expanded(
+                          child: Container(
+                            height: 48,
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: _isProcessingVoice
+                                        ? Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const SizedBox(
+                                                width: 14,
+                                                height: 14,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9500)),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Analyzing...',
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                      color: const Color(0xFFFF9500),
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 12,
+                                                    ),
+                                              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                                               .fade(begin: 0.4, end: 1.0, duration: 600.ms),
+                                            ],
+                                          )
+                                        : AudioVisualizer(
+                                            level: _audioLevel,
+                                            color: const Color(0xFFFF9500),
+                                          ),
+                                  ),
                                 ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 12,
+                                if (!_isProcessingVoice) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _voiceStatus,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: const Color(0xFFFF9500),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : AppColors.lightTextPrimary,
-                                fontSize: 15,
+                        )
+                      else
+                        Expanded(
+                          child: TextField(
+                            controller: _textController,
+                            decoration: InputDecoration(
+                              hintText: 'Describe emergency...',
+                              hintStyle: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white30
+                                        : AppColors.lightTextMuted,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 12,
                               ),
-                          maxLines: null,
-                          minLines: 1,
-                          enabled: !_isStreaming,
-                          onSubmitted: (_) => _sendMessage(),
+                            ),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : AppColors.lightTextPrimary,
+                                  fontSize: 15,
+                                ),
+                            maxLines: null,
+                            minLines: 1,
+                            enabled: !_isStreaming,
+                            onSubmitted: (_) => _sendMessage(),
+                          ),
                         ),
-                      ),
                       const SizedBox(width: 8),
 
                       // Send Button
-                      _buildSendButton(),
+                      if (!_isVoiceMode)
+                        _buildSendButton(),
                     ],
                   ),
                 ),
@@ -828,5 +1145,56 @@ class _EmergencyChatViewState extends State<EmergencyChatView> {
         ],
       ),
     );
+  }
+
+  Widget _buildActiveQuickReplies() {
+    final defaultReplies = [
+      'Call 911',
+      'They are unconscious',
+      'Not breathing',
+      'It\'s getting worse',
+      'Patient is bleeding',
+    ];
+    
+    return Container(
+      height: 40,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: defaultReplies.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final reply = defaultReplies[index];
+          return ActionChip(
+            label: Text(
+              reply,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white 
+                    : AppColors.lightTextPrimary,
+              ),
+            ),
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E293B).withOpacity(0.8)
+                : Colors.white,
+            side: BorderSide(
+              color: AppColors.emergencyRed.withOpacity(0.3),
+              width: 1,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            onPressed: () {
+              if (!_isStreaming) {
+                _textController.text = reply;
+                _sendMessage();
+              }
+            },
+          );
+        },
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.5);
   }
 }

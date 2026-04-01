@@ -61,30 +61,37 @@ class EmergencyResponseService extends ChangeNotifier {
       // Get the appropriate system prompt for the current category
       final systemPrompt = EmergencyPrompts.getPromptForCategory(_currentCategory);
 
-      // Build conversation context (last 5 messages for context window)
-      final contextMessages = _conversationHistory
-          .where((m) => m.isUser)
-          .take(5)
-          .map((m) => m.text)
-          .toList()
-          .reversed
-          .join('\n');
+      // Build conversation context properly keeping both sides of conversation
+      final pastHistory = _conversationHistory.length > 1
+          ? _conversationHistory.sublist(0, _conversationHistory.length - 1)
+          : <EmergencyMessage>[];
+          
+      final recentHistory = pastHistory.length > 6 
+          ? pastHistory.sublist(pastHistory.length - 6) 
+          : pastHistory;
 
-      // Construct the prompt with context
+      String formattedPrompt = '';
+      
+      if (recentHistory.isNotEmpty) {
+        formattedPrompt += "Previous conversation context:\n";
+        for (var m in recentHistory) {
+          formattedPrompt += "${m.isUser ? 'User' : 'Assistant'}: ${m.text}\n";
+        }
+        formattedPrompt += "\n---\n\n";
+      }
+
       final fullPrompt = '''
-Previous context:
-$contextMessages
+$formattedPrompt
+Based on the context, provide a direct, helpful, and concise response to the user's latest message. DO NOT quote or repeat the user's message. DO NOT repeat the conversation history. DO NOT use conversational filler if an emergency procedure is needed.
 
-Current emergency query: $userQuery
-
-Provide immediate, actionable guidance:
-''';
+User: $userQuery
+Assistant:''';
 
       // Generate response using RunAnywhere SDK
       final result = await RunAnywhere.generate(
         fullPrompt,
         options: LLMGenerationOptions(
-          maxTokens: 500,
+          maxTokens: 200,
           temperature: 0.3, // Lower temperature for more consistent, reliable responses
           systemPrompt: systemPrompt,
         ),
@@ -117,29 +124,37 @@ Provide immediate, actionable guidance:
       // Get the appropriate system prompt
       final systemPrompt = EmergencyPrompts.getPromptForCategory(_currentCategory);
 
-      // Build conversation context
-      final contextMessages = _conversationHistory
-          .where((m) => m.isUser)
-          .take(5)
-          .map((m) => m.text)
-          .toList()
-          .reversed
-          .join('\n');
+      // Build conversation context properly keeping both sides of conversation
+      final pastHistory = _conversationHistory.length > 1
+          ? _conversationHistory.sublist(0, _conversationHistory.length - 1)
+          : <EmergencyMessage>[];
+          
+      final recentHistory = pastHistory.length > 6 
+          ? pastHistory.sublist(pastHistory.length - 6) 
+          : pastHistory;
+
+      String formattedPrompt = '';
+      
+      if (recentHistory.isNotEmpty) {
+        formattedPrompt += "Previous conversation context:\n";
+        for (var m in recentHistory) {
+          formattedPrompt += "${m.isUser ? 'User' : 'Assistant'}: ${m.text}\n";
+        }
+        formattedPrompt += "\n---\n\n";
+      }
 
       final fullPrompt = '''
-Previous context:
-$contextMessages
+$formattedPrompt
+Based on the context, provide a direct, helpful, and concise response to the user's latest message. DO NOT quote or repeat the user's message. DO NOT repeat the conversation history. DO NOT use conversational filler if an emergency procedure is needed.
 
-Current emergency query: $userQuery
-
-Provide immediate, actionable guidance:
-''';
+User: $userQuery
+Assistant:''';
 
       // Stream tokens
       final streamResult = await RunAnywhere.generateStream(
         fullPrompt,
         options: LLMGenerationOptions(
-          maxTokens: 500,
+          maxTokens: 200,
           temperature: 0.3,
           systemPrompt: systemPrompt,
         ),
