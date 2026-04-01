@@ -89,8 +89,9 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
         return;
       }
 
-      await _mesh.startAdvertising('SirenUser');
-      await _mesh.startDiscovery();
+      final currentName = _mesh.userName;
+      await _mesh.startAdvertising(currentName);
+      await _mesh.startDiscovery(currentName);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,7 +110,7 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
     });
 
     try {
-      final success = await _mesh.connectToDevice(device, 'SirenUser');
+      final success = await _mesh.connectToDevice(device, _mesh.userName);
 
       if (!mounted) return;
 
@@ -125,14 +126,56 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
     }
   }
 
-  void _showError(String msg) {
-    if (!mounted) return;
-    setState(() {
-      _errorMessage = msg;
-      _state = MeshConnectionState.idle;
-    });
-    _radarController.stop();
-    _radarController.reset();
+  void _showError(String message) {
+    if (mounted) {
+      setState(() {
+        _errorMessage = message;
+        _state = MeshConnectionState.idle;
+      });
+      _radarController.stop();
+      _radarController.reset();
+    }
+  }
+
+  void _showEditNameDialog() {
+    final controller = TextEditingController(text: _mesh.userName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Edit Identity', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your nickname...',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+            filled: true,
+            fillColor: Colors.black.withOpacity(0.2),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                await _mesh.updateUserName(controller.text.trim());
+                if (mounted) setState(() {});
+                Navigator.pop(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   String _friendlyError(Object e) {
@@ -163,17 +206,11 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF0F172A)
-          : AppColors.lightBg, // Dope dark slate or premium light bg
+          : AppColors.lightBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Find Nearby Devices',
-            style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : AppColors.lightTextPrimary,
-                fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded,
               color: Theme.of(context).brightness == Brightness.dark
@@ -193,7 +230,7 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
                   center: Alignment.topCenter,
                   radius: 1.5,
                 )
-              : null, // Radial doesn't look as good in light mode
+              : null,
           color: Theme.of(context).brightness == Brightness.dark
               ? null
               : AppColors.lightBg,
@@ -201,31 +238,83 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildStatusBanner(),
-                const SizedBox(height: 32),
-                _buildRadarAndScanButton(),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 24),
-                  _buildErrorBanner(),
-                ],
-                const SizedBox(height: 32),
-                if (_mesh.discoveredDevices.isNotEmpty) ...[
-                  Text(
-                    'NEARBY DEVICES',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Colors.blueAccent.withOpacity(0.8),
-                          letterSpacing: 1.5,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // ─── Header ──────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Find Nearby Devices',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.lightTextPrimary,
+                              ),
                         ),
-                  ).animate().fadeIn().slideX(),
-                  const SizedBox(height: 16),
-                  Expanded(child: _buildDeviceList()),
-                ] else
-                  Expanded(child: _buildEmptyDevicesState()),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Establish a secure tactical link with nearby operators.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withOpacity(0.6)
+                                    : AppColors.lightTextSecondary,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ─── Identity Card ───────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: _buildIdentityCard(),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildStatusBanner(),
+                      const SizedBox(height: 24),
+                      _buildRadarAndScanButton(),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 24),
+                        _buildErrorBanner(),
+                      ],
+                      const SizedBox(height: 20),
+                      if (_mesh.discoveredDevices.isNotEmpty) ...[
+                        Text(
+                          'NEARBY DEVICES',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: Colors.blueAccent.withOpacity(0.8),
+                                letterSpacing: 1.5,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ).animate().fadeIn().slideX(),
+                        const SizedBox(height: 16),
+                      ],
+                    ],
+                  ),
+                ),
+                if (_mesh.discoveredDevices.isNotEmpty)
+                  _buildDeviceListSliver()
+                else
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 20, bottom: 20),
+                      child: _buildEmptyDevicesState(),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -287,14 +376,17 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
         children: [
           Icon(bannerIcon, color: bannerColor, size: 22),
           const SizedBox(width: 14),
-          Text(
-            bannerText,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: bannerColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  letterSpacing: 0.5,
-                ),
+          Expanded(
+            child: Text(
+              bannerText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: bannerColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           if (_state == MeshConnectionState.scanning) ...[
             const Spacer(),
@@ -433,22 +525,22 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF38BDF8).withOpacity(0.2),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
+                          color: const Color(0xFF38BDF8).withOpacity(0.15),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     child: ElevatedButton.icon(
                       key: const ValueKey('scan_button'),
                       onPressed: _startScan,
-                      icon: const Icon(Icons.radar_rounded, color: Colors.white),
+                      icon: const Icon(Icons.radar_rounded, color: Colors.white, size: 20),
                       label: const Text('Start Scanning',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5, fontSize: 15)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF3B82F6),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 18),
+                            horizontal: 28, vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -538,25 +630,94 @@ class _MeshDeviceDiscoveryViewState extends State<MeshDeviceDiscoveryView>
     ).animate().fadeIn(duration: 800.ms);
   }
 
-  Widget _buildDeviceList() {
-    return ListView.separated(
-      itemCount: _mesh.discoveredDevices.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final device = _mesh.discoveredDevices[index];
-        final isConnecting = _connectingDeviceId == device.id;
+  Widget _buildIdentityCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.white.withOpacity(0.05)
+            : Colors.black.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.blueAccent.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.blueAccent.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person_rounded, color: Colors.blueAccent, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Identity',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _mesh.userName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          IconButton(
+            onPressed: _showEditNameDialog,
+            icon: const Icon(Icons.edit_rounded, color: Colors.blueAccent, size: 20),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.blueAccent.withOpacity(0.1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-        return _DeviceCard(
-          device: device,
-          isConnecting: isConnecting,
-          onConnect: () => _connectToDevice(device),
-        ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideY(
-              begin: 0.15,
-              end: 0,
-              duration: 350.ms,
-              delay: (index * 60).ms,
-            );
-      },
+  Widget _buildDeviceListSliver() {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final device = _mesh.discoveredDevices[index];
+          final isConnecting = _connectingDeviceId == device.id;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _DeviceCard(
+              device: device,
+              isConnecting: isConnecting,
+              onConnect: () => _connectToDevice(device),
+            ).animate().fadeIn(duration: 350.ms, delay: (index * 60).ms).slideY(
+                  begin: 0.15,
+                  end: 0,
+                  duration: 350.ms,
+                  delay: (index * 60).ms,
+                ),
+          );
+        },
+        childCount: _mesh.discoveredDevices.length,
+      ),
     );
   }
 }
@@ -631,12 +792,14 @@ class _DeviceCard extends StatelessWidget {
               children: [
                 Text(
                   device.name.isNotEmpty ? device.name : 'Unknown Device',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.white
                             : AppColors.lightTextPrimary,
-                        fontSize: 16,
+                        fontSize: 15,
                       ),
                 ),
                 const SizedBox(height: 4),

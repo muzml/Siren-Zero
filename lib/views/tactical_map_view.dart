@@ -156,34 +156,6 @@ class _TacticalMapViewState extends State<TacticalMapView> {
                        .scale(begin: const Offset(1, 1), end: const Offset(1.15, 1.15), duration: 1200.ms, curve: Curves.easeInOut),
                     ),
                   ),
-
-                  // 🔵 PEER MARKERS
-                  for (final peerId in _mesh.peerLocations.keys)
-                    Marker(
-                      point: LatLng(
-                        _mesh.peerLocations[peerId]![0],
-                        _mesh.peerLocations[peerId]![1],
-                      ),
-                      width: 50,
-                      height: 50,
-                      child: Column(
-                        children: [
-                          const Icon(Icons.location_on_rounded, 
-                            color: AppColors.infoBlue, size: 30),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              _mesh.connectedPeerName ?? "PEER",
-                              style: const TextStyle(color: Colors.white, fontSize: 8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ],

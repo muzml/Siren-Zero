@@ -41,11 +41,13 @@ class _MeshChatPageState extends State<MeshChatPage> {
   final ScrollController _scrollController = ScrollController();
   final List<_MeshMessage> _messages = [];
   MeshConnectionState _connectionState = MeshConnectionState.connected;
+  late String _peerName;
 
   @override
   void initState() {
     super.initState();
     _connectionState = _mesh.connectionState;
+    _peerName = widget.peerName;
 
     _mesh.onMessageReceived = (msg) {
       if (!mounted) return;
@@ -62,6 +64,10 @@ class _MeshChatPageState extends State<MeshChatPage> {
     _mesh.onConnectionStateChanged = (state) {
       if (mounted) setState(() => _connectionState = state);
     };
+
+    _mesh.onPeerNameChanged = (newName) {
+      if (mounted) setState(() => _peerName = newName);
+    };
   }
 
   @override
@@ -70,6 +76,7 @@ class _MeshChatPageState extends State<MeshChatPage> {
     _scrollController.dispose();
     _mesh.onMessageReceived = null;
     _mesh.onConnectionStateChanged = null;
+    _mesh.onPeerNameChanged = null;
     super.dispose();
   }
 
@@ -177,7 +184,7 @@ class _MeshChatPageState extends State<MeshChatPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.peerName.isNotEmpty ? widget.peerName : 'Peer Device',
+                        _peerName.isNotEmpty ? _peerName : 'Peer Device',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -204,9 +211,25 @@ class _MeshChatPageState extends State<MeshChatPage> {
               ],
             ),
             actions: [
-              IconButton(
+              PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
-                onPressed: () {},
+                onSelected: (value) {
+                  if (value == 'edit_name') _showEditNameDialog();
+                },
+                color: const Color(0xFF1E293B),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit_name',
+                    child: Row(
+                      children: [
+                        Icon(Icons.badge_rounded, color: Colors.blueAccent, size: 20),
+                        SizedBox(width: 12),
+                        Text('Edit My Identity', style: TextStyle(color: Colors.white, fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -418,6 +441,47 @@ class _MeshChatPageState extends State<MeshChatPage> {
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────
+  
+  void _showEditNameDialog() {
+    final controller = TextEditingController(text: _mesh.userName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Edit My Identity', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter your nickname...',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+            filled: true,
+            fillColor: Colors.black.withOpacity(0.2),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                await _mesh.updateUserName(controller.text.trim());
+                if (mounted) setState(() {});
+                Navigator.pop(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   String _connectionStateLabel() {
     switch (_connectionState) {
