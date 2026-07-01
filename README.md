@@ -23,6 +23,17 @@ Zero-latency, offline-first emergency response guidance powered by on-device AI.
 - 🔍 Implemented nearby device discovery & connection flow  
 
 ---
+---
+
+## 🏆 Hackathon Achievement
+
+Siren-Zero was selected among the **Top 25 Finalists** at **HackXtreme 2026**, organized by **Guru Gobind Singh Indraprastha University (GGSIPU), Delhi**.
+
+<p align="center">
+  <img src="./assets/achievements/hackxtreme-result.jpg" width="700" alt="HackXtreme Shortlisted Result">
+</p>
+
+---
 
 ## ⚙️ Tech Stack
 
