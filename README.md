@@ -23,7 +23,6 @@ Zero-latency, offline-first emergency response guidance powered by on-device AI.
 - 🔍 Implemented nearby device discovery & connection flow  
 
 ---
----
 
 ## 🏆 Hackathon Achievement
 
