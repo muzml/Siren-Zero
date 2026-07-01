@@ -29,7 +29,7 @@ Zero-latency, offline-first emergency response guidance powered by on-device AI.
 Siren-Zero was selected among the **Top 25 Finalists** at **HackXtreme 2026**, organized by **Guru Gobind Singh Indraprastha University (GGSIPU), Delhi**.
 
 <p align="center">
-  <img src="./assets/demo/hackxtreme_1.jpeg" alt="HackXtreme 2026 Result" width="750">
+  <img src="./assets/demo/hackxtreme_1.jpeg" alt="HackXtreme 2026 Result" width="220">
 </p>
 
 ---
