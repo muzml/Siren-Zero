@@ -79,35 +79,51 @@ Siren-Zero is the brain of a survival expert, compressed into your pocket.
 
 ### 🏠 Home Screen
 
-![Home](./assets/demo/home.png)
+<p align="center">
+  <img src="./assets/demo/home.png" width="220" alt="Home Screen">
+</p>
 
 ### 💬 AI Chat Interface
 
-![Chat](./assets/demo/chat.png)
+<p align="center">
+  <img src="./assets/demo/chat.png" width="220" alt="AI Chat Interface">
+</p>
 
 ### 🚨 Emergency Actions
 
-![Emergency](./assets/demo/emergency.png)
+<p align="center">
+  <img src="./assets/demo/emergency.png" width="220" alt="Emergency Actions">
+</p>
 
 ### 📡 Mesh Device Discovery
 
-![Mesh](./assets/demo/mesh.png)
+<p align="center">
+  <img src="./assets/demo/mesh.png" width="220" alt="Mesh Device Discovery">
+</p>
 
 ### 🤖 AI Assistant
 
-![Assistant](./assets/demo/assistant.png)
+<p align="center">
+  <img src="./assets/demo/assistant.png" width="220" alt="AI Assistant">
+</p>
 
 ### 🗺️ Mission Map
 
-![Map](./assets/demo/map.png)
+<p align="center">
+  <img src="./assets/demo/map.png" width="220" alt="Mission Map">
+</p>
 
 ### 📚 Protocol Library
 
-![Protocols](./assets/demo/protocols.png)
+<p align="center">
+  <img src="./assets/demo/protocols.png" width="220" alt="Protocol Library">
+</p>
 
 ### ❤️ CPR Guide
 
-![CPR](./assets/demo/cpr.png)
+<p align="center">
+  <img src="./assets/demo/cpr.png" width="220" alt="CPR Guide">
+</p>
 
 ---
 
