@@ -1,7 +1,7 @@
 # Siren-Zero 🚨
 
 > 🏆 Built during a hackathon – designed for real-world emergency scenarios with zero internet dependency  
-💡 “When networks fail, Siren-Zero doesn’t.”
+💡 “When networks fail, Siren-Zero doesn’t.” 
 
 ---
 
